@@ -47,6 +47,7 @@ usage(int exitcode) {
   fprintf(stderr,
     "Usage: simdb-fdupes [path]\n"
     "  -h         This help\n"
+    "  -d <int>   Max difference in images (in percents: 0-50)\n"
     "  -v         Verbose messages\n"
   );
   exit(exitcode);
@@ -143,7 +144,7 @@ make_samples(filelist_t *list, simdb_t *simdb) {
 }
 
 static group_t *
-make_groups(filelist_t *list, simdb_t *simdb) {
+make_groups(filelist_t *list, simdb_t *simdb, int maxdiff) {
   simdb_search_t search;
   group_t *groups = NULL, *group, **map = NULL;
   int pct = 0, inum, gnum = 1; /* next group number */
@@ -157,6 +158,8 @@ make_groups(filelist_t *list, simdb_t *simdb) {
   }
 
   simdb_search_init(&search);
+  search.d_ratio  = maxdiff / (float) 100;
+  search.d_bitmap = maxdiff / (float) 100;
   for (int num = 1; num < list->size; num++) {
     if (!filelist_get(flist, num))
       continue; /* file was not sampled */
@@ -233,16 +236,19 @@ int main(int argc, char **argv) {
   group_t *groups = NULL;
   char tempdb[] = "/tmp/simdb-XXXXXX";
   char path[PATH_MAX] = "";
-  int opt = -1, ret = 0;
+  int opt = -1, ret = 0, maxdiff = 7;
 
   if (argc <= 1)
     usage(EXIT_FAILURE);
 
-  while ((opt = getopt(argc, argv, "hv")) != -1) {
+  while ((opt = getopt(argc, argv, "hd:v")) != -1) {
     switch (opt) {
       case 'v':
         if (msglevel < debug)
           msglevel++;
+        break;
+      case 'd':
+        maxdiff = atoi(optarg);
         break;
       case 'h':
         usage(EXIT_SUCCESS);
@@ -257,6 +263,11 @@ int main(int argc, char **argv) {
     root = argv[optind];
   } else {
     usage(EXIT_FAILURE);
+  }
+
+  if (maxdiff < 0 || maxdiff > 50) {
+    fprintf(stderr, "! '-d' option should be in range [0, 50]\n");
+    return EXIT_FAILURE;
   }
 
   /* resolve root path */
@@ -304,7 +315,7 @@ int main(int argc, char **argv) {
 
   make_samples(flist, simdb);
 
-  groups = make_groups(flist, simdb);
+  groups = make_groups(flist, simdb, maxdiff);
 
   if (groups) {
     log_msg(verbose, "* found image groups:\n");
