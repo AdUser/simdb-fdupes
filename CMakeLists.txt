@@ -18,6 +18,16 @@ if (WITH_HARDENING)
   add_definitions("-D_FORTIFY_SOURCE=2")
 endif ()
 
+find_library(MAGIC_FOUND "magic")
+if (NOT MAGIC_FOUND)
+  message(FATAL_ERROR "libmagic not found")
+endif ()
+
+find_library(SIMDB_FOUND "simdb")
+if (NOT SIMDB_FOUND)
+  message(FATAL_ERROR "libsimdb not found")
+endif ()
+
 message(STATUS "Project    : ${CNAME} v${VERSION}")
 message(STATUS "Compiler   : ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION})")
 message(STATUS "- CFLAGS   : ${CMAKE_C_FLAGS}")
